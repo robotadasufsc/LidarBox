@@ -1,6 +1,8 @@
-#include "gps.h"
+#ifdef GPS_GLOBALSAT_EM506
 
-#include "debug.h"
+#include "./common.h"
+
+#include "../debug.h"
 
 bool setup_gps() {
 	// GPS is on the ProMicro's UART (Serial1)
@@ -61,3 +63,5 @@ void consume_gps() {
 #endif
 	}
 }
+
+#endif

@@ -12,7 +12,9 @@ This Arduino project logs data
 
 - Arduino ProMicro (or clone)
 - Polulu MinIMU-9 Inertial Measurement Unit
-- GlobalSat EM506 GPS Module
+- GNSS module (any of):
+  - ADH-tech GP-735T
+  - GlobalSat EM506 GPS Module
 - LiDAR module (any of):
   - Benewake TF02-Pro
   - Lightware SF11

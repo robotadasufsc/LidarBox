@@ -6,7 +6,7 @@
 #include <SD.h>
 
 #include "lidar/common.h"
-#include "gps.h"
+#include "gps/common.h"
 #include "debug.h"
 #include "imu.h"
 
@@ -148,12 +148,12 @@ void setup() {
 	DEBUGLN(filename);
 	DEBUGLN();
 
-	DEBUGLN(F("# GPS and Laser Rangefinder logging with Pro Micro Arduino 3.3v"));
+	/*DEBUGLN(F("# GPS and Laser Rangefinder logging with Pro Micro Arduino 3.3v"));
 	DEBUGLN(F("# units: accel=g  gyro=°/s"));
 
 	DEBUG(F("#gmt_date\tgmt_time\tnum_sats\tlongitude\tlatitude\t"));
 	DEBUG(F("gps_altitude_m\tSOG_kt\tCOG\tHDOP\tlaser_altitude_cm\t"));
-	DEBUGLN(F("tilt_deg\taccel_x\taccel_y\taccel_z\tgyro_x\tgyro_y\tgyro_z"));
+	DEBUGLN(F("tilt_deg\taccel_x\taccel_y\taccel_z\tgyro_x\tgyro_y\tgyro_z"));*/
 #endif
 
 	logfile.println(F("# GPS and Laser Rangefinder logging with Pro Micro Arduino 3.3v"));
@@ -306,7 +306,7 @@ void loop(void) {
 	write_data_line(DEBUG_STREAM, lidar_distance, imu_results);
 
 	// clear the pipes
-	consume_gps(0);
+	consume_gps();
 #endif
 
 	// write to SD card
