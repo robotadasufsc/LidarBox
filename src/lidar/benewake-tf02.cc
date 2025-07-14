@@ -35,13 +35,22 @@ void read_response(size_t size) {
 bool setup_lidar() {
 	// startup I2C bus for the LiDAR
 	Wire.begin();
+    Wire.setTimeout(250);
 
     // Get firmware version major:u8 minor:u8 micro:u48
     Wire.beginTransmission(I2C_ADR);
     Wire.write("\x5A\x04\x01\x5F");
     Wire.endTransmission();
     delay(100);
-    read_response(8);
+
+    {
+        size_t size = Wire.requestFrom(I2C_ADR, 8);
+        if(size == 0) {
+            DEBUG("The lidar is probably in serial mode");
+            return false;
+        }
+        read_response(8);
+    }
 
     // Set framerate to 1000
     Wire.beginTransmission(I2C_ADR);
