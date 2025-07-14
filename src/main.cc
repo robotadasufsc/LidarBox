@@ -85,30 +85,26 @@ void setup() {
 #endif
 
 	if(!setup_lidar()) {
-		DEBUGLN(F("ERROR: could not setup lidar. Halting."));
+		DEBUGLN(F("LiDAR error. Halting."));
 		lock_and_report_error(ERR_NO_LIDAR);
 	}
 
 	if(!setup_gps()) {
-		DEBUGLN(F("ERROR: could not lock GPS. Halting."));
+		DEBUGLN(F("GPS error. Halting."));
 		lock_and_report_error(ERR_NO_GPS_LOCK);
 	}
 
 	if(!setup_imu()) {
-		DEBUGLN(F("ERROR: failed to detect and initialise IMU. Halting"));
+		DEBUGLN(F("IMU error. Halting"));
 		lock_and_report_error(ERR_IMU_FAIL);
 	}
 	imu.enableDefault();
 
-	DEBUGLN(F("Initialising SD card..."));
-
 	// see if the card is present and can be initialised
 	if(!SD.begin(SPI_CS)) {
-		DEBUGLN(F("ERROR: SD card failed, or not present. Halting."));
+		DEBUGLN(F("SD card error. Halting."));
 		lock_and_report_error(ERR_SD_FAIL);
 	}
-
-	DEBUGLN(F("SD card initialised."));
 
 	// set SD file date time callback function
 	SdFile::dateTimeCallback(fat_datetime_callback);
@@ -121,14 +117,12 @@ void setup() {
 		filename[6] = (i % 100) / 10 + '0';
 		filename[7] = i % 10 + '0';
 
-		DEBUG(F("The file "));
 		DEBUG(filename);
 		DEBUG(F(" "))
 
 		// Only open a new file if it doesn't exist
 		if(!SD.exists(filename)) {
 			// We consume the GPS data so we can set the creation date of the file
-			consume_gps();
 			logfile = SD.open(filename, FILE_WRITE);
 			DEBUGLN(F("is available"));
 
@@ -137,6 +131,8 @@ void setup() {
 		DEBUGLN(F("already exists."));
 	}
 
+	consume_gps();
+
 	delay(500);  // give it a chance to catch up before testing if it's ok.
 	if(!logfile) {
 		DEBUGLN(F("ERROR: couldn't create log file. Halting."));
@@ -144,10 +140,6 @@ void setup() {
 	}
 
 #ifdef DEBUG_TO_SERIAL
-	DEBUG(F("Logging to: "));
-	DEBUGLN(filename);
-	DEBUGLN();
-
 	/*DEBUGLN(F("# GPS and Laser Rangefinder logging with Pro Micro Arduino 3.3v"));
 	DEBUGLN(F("# units: accel=g  gyro=°/s"));
 
@@ -156,13 +148,13 @@ void setup() {
 	DEBUGLN(F("tilt_deg\taccel_x\taccel_y\taccel_z\tgyro_x\tgyro_y\tgyro_z"));*/
 #endif
 
-	logfile.println(F("# GPS and Laser Rangefinder logging with Pro Micro Arduino 3.3v"));
+	/*logfile.println(F("# GPS and Laser Rangefinder logging with Pro Micro Arduino 3.3v"));
 	logfile.println(F("# units:  accel=1g  gyro=deg/sec"));
 
 	logfile.print(F("#gmt_date\tgmt_time\tnum_sats\tlongitude\tlatitude\t"));
 	logfile.print(F("gps_altitude_m\tSOG_kt\tCOG\tHDOP\tlaser_altitude_cm\t"));
 	logfile.println(F("tilt_deg\taccel_x\taccel_y\taccel_z\tgyro_x\tgyro_y\tgyro_z"));
-	logfile.flush();
+	logfile.flush();*/
 
 	// Should we wait a while for GPS to get a fix?
 	wakeful_delay(2000);
@@ -267,6 +259,9 @@ void write_data_line(Stream &stream, int16_t lidar_distance, const struct IMUDat
 #undef __WRITE_GPS_MEASURE__
 
 void loop(void) {
+	// IMU
+	IMUData imu_results;
+
 	// get GPS string
 	consume_gps();
 
@@ -282,9 +277,9 @@ void loop(void) {
 			if(delta_t > next_signal) {
 				int16_t lidar_distance = get_lidar_distance_cm();
 
-				struct IMUData imu_results;
 				get_imu_readings(imu_results);
 
+				write_data_line(DEBUG_STREAM, lidar_distance, imu_results);
 				write_data_line(logfile, lidar_distance, imu_results, true);
 
 				next_signal += 5000;
@@ -292,8 +287,6 @@ void loop(void) {
 		}
 	}
 
-	// IMU
-	IMUData imu_results;
 	get_imu_readings(imu_results);
 
 	// update gps data available scan again to clear the decks
@@ -304,9 +297,6 @@ void loop(void) {
 #ifdef DEBUG_TO_SERIAL
 	// Printout to USB-serial
 	write_data_line(DEBUG_STREAM, lidar_distance, imu_results);
-
-	// clear the pipes
-	consume_gps();
 #endif
 
 	// write to SD card

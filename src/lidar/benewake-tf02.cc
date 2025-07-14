@@ -12,18 +12,16 @@ D2 and D3.
 
 #include "../debug.h"
 
-//#define I2C_SDA 2
-//#define I2C_SCL 3
-
 // The I2C address of the lidar is preset to 0x10
-#define I2C_ADR 0x10
+#define I2C_ADDR 0x10
 
 void read_response(size_t size) {
-    Wire.requestFrom(I2C_ADR, size);
+    Wire.requestFrom(I2C_ADDR, size);
 
-    DEBUG("Response: ");
+    DEBUG(F("Response: "));
     while(Wire.available()) {
 #ifdef DEBUG_TO_SERIAL
+        DEBUG(' ');
         DEBUG(Wire.read());
 #else
         Wire.read();
@@ -38,36 +36,50 @@ bool setup_lidar() {
     Wire.setTimeout(250);
 
     // Get firmware version major:u8 minor:u8 micro:u48
-    Wire.beginTransmission(I2C_ADR);
+    Wire.beginTransmission(I2C_ADDR);
     Wire.write("\x5A\x04\x01\x5F");
     Wire.endTransmission();
     delay(100);
 
     {
-        size_t size = Wire.requestFrom(I2C_ADR, 8);
+        size_t size = Wire.requestFrom(I2C_ADDR, 7);
         if(size == 0) {
-            DEBUG("The lidar is probably in serial mode");
+            DEBUG(F("The LiDAR is probably in serial mode"));
             return false;
         }
-        read_response(8);
+
+        Wire.read(); Wire.read(); Wire.read();
+
+        uint8_t micro_version = Wire.read();
+        uint8_t minor_version = Wire.read();
+        uint8_t major_version = Wire.read();
+        
+        Wire.read();
+
+        DEBUG("LiDAR FW: ");
+        DEBUG(major_version);
+        DEBUG('.');
+        DEBUG(minor_version);
+        DEBUG('.');
+        DEBUGLN(micro_version);
     }
 
     // Set framerate to 1000
-    Wire.beginTransmission(I2C_ADR);
+    Wire.beginTransmission(I2C_ADDR);
     Wire.write("\x5A\x06\x03\xE8\x03\x4E");
     Wire.endTransmission();
     delay(100);
-    read_response(7);
+    read_response(6);
 
     // Set output format
-    Wire.beginTransmission(I2C_ADR);
+    Wire.beginTransmission(I2C_ADDR);
     Wire.write("\x5A\x05\x05\x01\x65");
     Wire.endTransmission();
     delay(100);
-    read_response(7);
+    read_response(5);
 
     // Save configuration
-    Wire.beginTransmission(I2C_ADR);
+    Wire.beginTransmission(I2C_ADDR);
     Wire.write("\x5A\x04\x11\x6F");
     Wire.endTransmission();
     delay(100);
@@ -86,7 +98,11 @@ bool setup_lidar() {
 int16_t get_lidar_distance_cm() {
     uint8_t msg[10];
 
-	Wire.requestFrom(I2C_ADR, 9);
+    Wire.beginTransmission(I2C_ADDR);
+    Wire.write("\x5A\x05\x00\x01\x60", 5);
+    Wire.endTransmission();
+
+	Wire.requestFrom(I2C_ADDR, 9);
 
     size_t size = Wire.available();
     size_t limit = size > 9 ? 9 : size;
@@ -95,14 +111,14 @@ int16_t get_lidar_distance_cm() {
     msg[limit] = 0;
 
     if(size < 9) {
-        DEBUG(F("Message too short: '"));
+        DEBUG(F("LiDAR msg too short: '"));
         DEBUGHEX(msg, 9);
         DEBUGLN(F("')"));
         return -1;
     }
     
     if(size > 9) {
-        DEBUG(F("Message too long: '"));
+        DEBUG(F("LiDAR msg too long: '"));
         DEBUGHEX(msg, 9);
         DEBUGLN(F("'..."));
         return -1;
@@ -119,7 +135,7 @@ int16_t get_lidar_distance_cm() {
         if(msg[8] == (sum & 0xFF)) return distance;
     }
 
-    DEBUG(F("Bad message: '"));
+    DEBUG(F("Bad LiDAR message: '"));
     DEBUGHEX(msg, 9);
     DEBUGLN(F("'"));
 

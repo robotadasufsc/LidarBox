@@ -10,7 +10,8 @@
     if(s > 0 && DEBUG_STREAM) {\
         DEBUG_STREAM.print(code[0], HEX);\
         for(unsigned int i = 1; i < s; i++ ) {\
-            DEBUG_STREAM.print(' ');\
+            DEBUG(' ');\
+            if(code[i] < 16) DEBUG('0'); \
             DEBUG_STREAM.print(code[i], HEX);\
         }\
     }\
