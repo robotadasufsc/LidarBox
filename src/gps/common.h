@@ -8,7 +8,7 @@ digest the NMEA sentences coming in. The TinyGPS++ examples have a smartDelay() 
 */
 
 // The TinyGPS++ object
-static TinyGPSPlus gps;
+extern TinyGPSPlus gps;
 
 /**
  * Sets up the GPS module and wait for a fix.

@@ -4,6 +4,8 @@
 
 #include "../debug.h"
 
+TinyGPSPlus gps;
+
 bool setup_gps() {
 	// GPS is on the ProMicro's UART (Serial1)
 	// RX: pin 0; TX: pin 1

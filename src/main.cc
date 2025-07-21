@@ -106,6 +106,8 @@ void setup() {
 		lock_and_report_error(ERR_SD_FAIL);
 	}
 
+	consume_gps();
+
 	// set SD file date time callback function
 	SdFile::dateTimeCallback(fat_datetime_callback);
 
@@ -139,22 +141,13 @@ void setup() {
 		lock_and_report_error(ERR_SD_CREATE_FAIL);
 	}
 
-#ifdef DEBUG_TO_SERIAL
-	/*DEBUGLN(F("# GPS and Laser Rangefinder logging with Pro Micro Arduino 3.3v"));
-	DEBUGLN(F("# units: accel=g  gyro=°/s"));
-
-	DEBUG(F("#gmt_date\tgmt_time\tnum_sats\tlongitude\tlatitude\t"));
-	DEBUG(F("gps_altitude_m\tSOG_kt\tCOG\tHDOP\tlaser_altitude_cm\t"));
-	DEBUGLN(F("tilt_deg\taccel_x\taccel_y\taccel_z\tgyro_x\tgyro_y\tgyro_z"));*/
-#endif
-
-	/*logfile.println(F("# GPS and Laser Rangefinder logging with Pro Micro Arduino 3.3v"));
+	logfile.println(F("# GPS and Laser Rangefinder logging with Pro Micro Arduino 3.3v"));
 	logfile.println(F("# units:  accel=1g  gyro=deg/sec"));
 
 	logfile.print(F("#gmt_date\tgmt_time\tnum_sats\tlongitude\tlatitude\t"));
 	logfile.print(F("gps_altitude_m\tSOG_kt\tCOG\tHDOP\tlaser_altitude_cm\t"));
 	logfile.println(F("tilt_deg\taccel_x\taccel_y\taccel_z\tgyro_x\tgyro_y\tgyro_z"));
-	logfile.flush();*/
+	logfile.flush();
 
 	// Should we wait a while for GPS to get a fix?
 	wakeful_delay(2000);
@@ -278,6 +271,7 @@ void loop(void) {
 				int16_t lidar_distance = get_lidar_distance_cm();
 
 				get_imu_readings(imu_results);
+				logfile.flush();
 
 				write_data_line(DEBUG_STREAM, lidar_distance, imu_results);
 				write_data_line(logfile, lidar_distance, imu_results, true);
@@ -291,7 +285,7 @@ void loop(void) {
 
 	// update gps data available scan again to clear the decks
 	consume_gps();
-		
+
 	int16_t lidar_distance = get_lidar_distance_cm();
 
 #ifdef DEBUG_TO_SERIAL
@@ -302,23 +296,4 @@ void loop(void) {
 	// write to SD card
 	write_data_line(logfile, lidar_distance, imu_results, true);
 	logfile.flush();
-
-	/*
-	// The following line will 'save' the file to the SD card after every 60 seconds of data - this will use more power
-	// but it's safer! If you want to speed up the system, remove the call to flush() and it will save the file only every
-	// 512 bytes - every time a sector on the SD card is filled with data. (about every 6 seconds). The flush() may still
-	// be needed to update the FAT?
-	unsigned long current_millisec;
-	current_millisec = millis();
-	if(current_millisec - prev_millisec > 60000) {
-		prev_millisec = current_millisec;
-
-		DEBUGLN(F("flushing to SDcard."));
-
-		digitalWrite(RX_LED, LOW);  // set the Rx LED on
-		logfile.flush();
-		digitalWrite(RX_LED, HIGH);  // set the Rx LED off
-		wakeful_delay(20);
-	}
-	*/
 }

@@ -109,22 +109,8 @@ int16_t get_lidar_distance_cm() {
     for(size_t i = 0; i < limit; i++) msg[i] = Wire.read();
     while(Wire.available()) Wire.read();
     msg[limit] = 0;
-
-    if(size < 9) {
-        DEBUG(F("LiDAR msg too short: '"));
-        DEBUGHEX(msg, 9);
-        DEBUGLN(F("')"));
-        return -1;
-    }
     
-    if(size > 9) {
-        DEBUG(F("LiDAR msg too long: '"));
-        DEBUGHEX(msg, 9);
-        DEBUGLN(F("'..."));
-        return -1;
-    }
-    
-    if(msg[0] == 0x59 && msg[1] == 0x59) {
+    if(size == 9 && msg[0] == 0x59 && msg[1] == 0x59) {
         uint16_t distance = (msg[3] << 8) | msg[2];
 
         // calculate checksum
@@ -136,7 +122,7 @@ int16_t get_lidar_distance_cm() {
     }
 
     DEBUG(F("Bad LiDAR message: '"));
-    DEBUGHEX(msg, 9);
+    DEBUGHEX(msg, limit);
     DEBUGLN(F("'"));
 
     return -1;

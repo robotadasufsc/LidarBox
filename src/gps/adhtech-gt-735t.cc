@@ -4,6 +4,8 @@
 
 #include "../debug.h"
 
+TinyGPSPlus gps;
+
 bool setup_gps() {
 	// GPS is on the ProMicro's UART (Serial1)
 	// RX: pin 0; TX: pin 1
@@ -35,28 +37,52 @@ bool setup_gps() {
 	// TinyGPS++ mainly works on GGA and RMC, so we turn off the other NMEA sentences
 
 	// Deactivate the messages we do not want
+
+	// "\xB5\x62\x06\x01\x08\x00\xF0\x01\x01\x00\x01\x01\x01\x01\x05\x3A"
 	Serial1.write("\xB5\x62\x06\x01\x08\x00\xF0\x01\x01\x00\x01\x01\x01\x01\x05\x3A", 16);  // GLL
+
+	delay(250);
+	while(Serial1.available()) Serial1.read();
+
 	Serial1.write("\xB5\x62\x06\x01\x08\x00\xF0\x02\x01\x00\x01\x01\x01\x01\x06\x41", 16);  // GSA
+
+	delay(250);
+	while(Serial1.available()) Serial1.read();
+
 	Serial1.write("\xB5\x62\x06\x01\x08\x00\xF0\x03\x01\x00\x01\x01\x01\x01\x07\x48", 16);  // GSV
+
+	delay(250);
+	while(Serial1.available()) Serial1.read();
+
 	Serial1.write("\xB5\x62\x06\x01\x08\x00\xF0\x05\x01\x00\x01\x01\x01\x01\x09\x56", 16);  // VTG
+
+	delay(250);
+	while(Serial1.available()) Serial1.read();
+
 	Serial1.write("\xB5\x62\x06\x01\x08\x00\xF0\x08\x00\x00\x00\x00\x00\x00\x07\x5B", 16);  // ZDA
+
+	delay(250);
+	while(Serial1.available()) Serial1.read();
 
 	// Keep the messages we want
 	Serial1.write("\xB5\x62\x06\x01\x08\x00\xF0\x00\x01\x01\x01\x01\x01\x01\x05\x38", 16);  // GGA
-	Serial1.write("\xB5\x62\x06\x01\x08\x00\xF0\x04\x01\x01\x01\x01\x01\x01\x09\x54", 16);  // RMC
 
-	// FIXME wait for ACKs, do not discard
+	delay(250);
 	while(Serial1.available()) Serial1.read();
 
-	delay(150);
+	Serial1.write("\xB5\x62\x06\x01\x08\x00\xF0\x04\x01\x01\x01\x01\x01\x01\x09\x54", 16);  // RMC
+
+	delay(250);
+	while(Serial1.available()) Serial1.read();
+
+	delay(250);
 
 	// Save the configuration
 	Serial1.write("\xB5\x62\x06\x09\x0C\x00\x00\x00\x00\x00\xFF\xFF\x00\x00\x00\x00\x00\x00\x19\x80", 20);
 
 	// FIXME wait for ACKs, do not discard
+	delay(250);
 	while(Serial1.available()) Serial1.read();
-
-	delay(150);
 
     return true;
 }
@@ -79,7 +105,7 @@ void consume_gps() {
 		} else if(c == '\n') {
 			DEBUGLN();
 		} else {
-			DEBUG(c);
+			DEBUG_STREAM.write(c);
 		}
 		gps.encode(c);
 #else
