@@ -17,7 +17,7 @@
 #define SPI_MOSI 16*/
 
 enum ErrorType {
-	ERR_NO_LIDAR,
+	ERR_NO_LIDAR = 1,
 	ERR_NO_GPS_LOCK,
 	ERR_IMU_FAIL,
 	ERR_SD_FAIL,
