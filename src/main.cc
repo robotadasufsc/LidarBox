@@ -12,9 +12,20 @@
 
 // SDcard SPI pins
 #define SPI_CS  10
-/*#define SPI_CLK  15
-#define SPI_MISO 14
-#define SPI_MOSI 16*/
+
+// Status LED pins
+#define STATUS_R 5
+#define STATUS_G 6
+#define STATUS_B 7
+
+#define STATUS_COLOR_BLACK    LOW,  LOW,  LOW
+#define STATUS_COLOR_RED     HIGH,  LOW,  LOW
+#define STATUS_COLOR_GREEN    LOW, HIGH,  LOW
+#define STATUS_COLOR_YELLOW  HIGH, HIGH,  LOW
+#define STATUS_COLOR_BLUE     LOW,  LOW, HIGH
+#define STATUS_COLOR_MAGENTA HIGH,  LOW, HIGH
+#define STATUS_COLOR_CYAN     LOW, HIGH, HIGH
+#define STATUS_COLOR_WHITE   HIGH, HIGH, HIGH
 
 enum ErrorType {
 	ERR_NO_LIDAR = 1,
@@ -27,24 +38,27 @@ enum ErrorType {
 // the logging file
 static File logfile;
 
+void set_status_color(uint8_t r, uint8_t g, uint8_t b) {
+	digitalWrite(STATUS_R, r);
+	digitalWrite(STATUS_G, g);
+	digitalWrite(STATUS_B, b);
+}
+
 /**
- * Captures the execution of the program and report the status. The report is done through the RX_LED by blinking.
+ * Captures the execution of the program and report the status. The report is done through the status by blinking.
  * 
  * The number of flashes in each cycle encodes the error.
  * 
  * \param code The number of times the LED will flash each cycle.
  */
-__ATTR_NORETURN__ void lock_and_report_error(size_t code) {
+__ATTR_NORETURN__ void lock_and_report_error(size_t error_code) {
 	while(1) {  // lock it up, blinking forever
-		for(size_t i = 0; i < code; i++) {
-			digitalWrite(LED_BUILTIN_RX, HIGH);
-			TXLED0;
-			delay(125);
-			digitalWrite(LED_BUILTIN_RX, LOW);
-			TXLED1;
-			delay(125);
+		for(size_t i = 0; i < error_code; i++) {
+			set_status_color(STATUS_COLOR_RED);
+			delay(250);
+			set_status_color(STATUS_COLOR_BLACK);
+			delay(250);
 		}
-		TXLED0;
 		delay(2000);
 	}
 }
@@ -72,6 +86,12 @@ void fat_datetime_callback(uint16_t *date, uint16_t *time) {
 }
 
 void setup() {
+	// Set status LED yellow, to indicate initialisation
+	pinMode(STATUS_R, OUTPUT);
+	pinMode(STATUS_G, OUTPUT);
+	pinMode(STATUS_B, OUTPUT);
+	set_status_color(STATUS_COLOR_YELLOW);
+
 #ifdef DEBUG_TO_SERIAL
 	Serial.begin(9600);
 
@@ -85,24 +105,24 @@ void setup() {
 #endif
 
 	if(!setup_lidar()) {
-		DEBUGLN(F("LiDAR error. Halting."));
+		DEBUGLN(F("LiDAR error."));
 		lock_and_report_error(ERR_NO_LIDAR);
 	}
 
 	if(!setup_gps()) {
-		DEBUGLN(F("GPS error. Halting."));
+		DEBUGLN(F("GPS error."));
 		lock_and_report_error(ERR_NO_GPS_LOCK);
 	}
 
 	if(!setup_imu()) {
-		DEBUGLN(F("IMU error. Halting"));
+		DEBUGLN(F("IMU error."));
 		lock_and_report_error(ERR_IMU_FAIL);
 	}
 	imu.enableDefault();
 
 	// see if the card is present and can be initialised
 	if(!SD.begin(SPI_CS)) {
-		DEBUGLN(F("SD card error. Halting."));
+		DEBUGLN(F("SD card error."));
 		lock_and_report_error(ERR_SD_FAIL);
 	}
 
@@ -137,12 +157,14 @@ void setup() {
 
 	delay(500);  // give it a chance to catch up before testing if it's ok.
 	if(!logfile) {
-		DEBUGLN(F("ERROR: couldn't create log file. Halting."));
+		DEBUGLN(F("ERROR: couldn't create log file."));
 		lock_and_report_error(ERR_SD_CREATE_FAIL);
 	}
 
 	logfile.println(F("# GPS and Laser Rangefinder logging with Pro Micro Arduino 3.3v"));
+#ifndef DEBUG_TO_SERIAL
 	logfile.println(F("# units:  accel=1g  gyro=deg/sec"));
+#endif
 
 	logfile.print(F("#gmt_date\tgmt_time\tnum_sats\tlongitude\tlatitude\t"));
 	logfile.print(F("gps_altitude_m\tSOG_kt\tCOG\tHDOP\tlaser_altitude_cm\t"));
@@ -152,13 +174,11 @@ void setup() {
 	// Should we wait a while for GPS to get a fix?
 	wakeful_delay(2000);
 
-	// Signal we are ready by blinking ten times
-	for(int i = 0; i < 10; i++) {
-		digitalWrite(LED_BUILTIN_RX, LOW);
-		TXLED1;
+	// Signal we are ready by blinking in cyan five times
+	for(int i = 0; i < 5; i++) {
+		set_status_color(STATUS_COLOR_BLACK);
 		wakeful_delay(100);
-		digitalWrite(LED_BUILTIN_RX, HIGH);
-		TXLED0;
+		set_status_color(STATUS_COLOR_CYAN);
 		wakeful_delay(100);
 	}
 }
@@ -174,9 +194,7 @@ void setup() {
  * \param lidar_distance The distance read by the lidar, in centimetres.
  * \param imu_results    The results returned by the innertial mesurement unit.
  */
-void write_data_line(Stream &stream, int16_t lidar_distance, const struct IMUData &imu_results, bool report_writing = false) {
-	if(report_writing) TXLED1;  // The Tx LED is not tied to a normally controlled pin so we use this macro
-
+void write_data_line(Stream &stream, int16_t lidar_distance, const struct IMUData &imu_results) {
 	if(gps.date.isValid()) {
 		u16 year = gps.date.year();
 		u8 month = gps.date.month();
@@ -245,8 +263,6 @@ void write_data_line(Stream &stream, int16_t lidar_distance, const struct IMUDat
 	stream.print(F("\t"));
 	stream.print(imu_results.gyro_z, 3);
 	stream.println();
-
-	if(report_writing) TXLED0;
 }
 
 #undef __WRITE_GPS_MEASURE__
@@ -254,6 +270,8 @@ void write_data_line(Stream &stream, int16_t lidar_distance, const struct IMUDat
 void loop(void) {
 	// IMU
 	IMUData imu_results;
+
+	set_status_color(STATUS_COLOR_BLACK);
 
 	// get GPS string
 	consume_gps();
@@ -263,6 +281,9 @@ void loop(void) {
 		unsigned long first_detected = millis();
 		unsigned long next_signal = 5000;
 
+		// Make status LED blue when there is no fix
+		set_status_color(STATUS_COLOR_BLUE);
+
 		while(!gps.date.isUpdated()) {
 			consume_gps();
 			unsigned long delta_t = millis() - first_detected;
@@ -271,15 +292,23 @@ void loop(void) {
 				int16_t lidar_distance = get_lidar_distance_cm();
 
 				get_imu_readings(imu_results);
-				logfile.flush();
 
 				write_data_line(DEBUG_STREAM, lidar_distance, imu_results);
-				write_data_line(logfile, lidar_distance, imu_results, true);
+
+				// Make status LED magenta when writing...
+				set_status_color(STATUS_COLOR_MAGENTA);
+				write_data_line(logfile, lidar_distance, imu_results);
+				set_status_color(STATUS_COLOR_BLUE);
+
+				logfile.flush();
 
 				next_signal += 5000;
 			}
 		}
 	}
+
+	// Make status LED green when everything is good
+	set_status_color(STATUS_COLOR_GREEN);
 
 	get_imu_readings(imu_results);
 
@@ -293,7 +322,8 @@ void loop(void) {
 	write_data_line(DEBUG_STREAM, lidar_distance, imu_results);
 #endif
 
-	// write to SD card
-	write_data_line(logfile, lidar_distance, imu_results, true);
+	// write to SD card, making the status LED white
+	set_status_color(STATUS_COLOR_WHITE);
+	write_data_line(logfile, lidar_distance, imu_results);
 	logfile.flush();
 }
