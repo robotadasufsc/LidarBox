@@ -82,6 +82,8 @@ void setup() {
 
 	DEBUG(F("Free RAM: "));
 	DEBUGLN(get_free_ram_size());
+#else 
+	delay(1000);
 #endif
 
 	if(!setup_lidar()) {
@@ -120,7 +122,7 @@ void setup() {
 		filename[7] = i % 10 + '0';
 
 		DEBUG(filename);
-		DEBUG(F(" "))
+		DEBUG(' ');
 
 		// Only open a new file if it doesn't exist
 		if(!SD.exists(filename)) {
@@ -273,7 +275,11 @@ void loop(void) {
 				get_imu_readings(imu_results);
 				logfile.flush();
 
-				write_data_line(DEBUG_STREAM, lidar_distance, imu_results);
+#ifdef DEBUG_TO_SERIAL
+				// Printout to USB-serial
+				if(DEBUG_STREAM)
+					write_data_line(DEBUG_STREAM, lidar_distance, imu_results);
+#endif
 				write_data_line(logfile, lidar_distance, imu_results, true);
 
 				next_signal += 5000;
@@ -290,7 +296,8 @@ void loop(void) {
 
 #ifdef DEBUG_TO_SERIAL
 	// Printout to USB-serial
-	write_data_line(DEBUG_STREAM, lidar_distance, imu_results);
+	if(DEBUG_STREAM)
+		write_data_line(DEBUG_STREAM, lidar_distance, imu_results);
 #endif
 
 	// write to SD card

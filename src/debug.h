@@ -4,7 +4,13 @@
 
 #define DEBUG_STREAM Serial
 
-#define DEBUG(message) { if(DEBUG_STREAM) DEBUG_STREAM.print(message); }
+void disable_debug();
+bool is_debug_enabled();
+
+#define DEBUG(message) {\
+    if(is_debug_enabled()) Serial.print(message);\
+}
+
 #define DEBUGHEX(code, size) {\
     const unsigned int s = size;\
     if(s > 0 && DEBUG_STREAM) {\
@@ -16,7 +22,10 @@
         }\
     }\
 }
-#define DEBUGLN(message) { if(DEBUG_STREAM) DEBUG_STREAM.println(message); }
+
+#define DEBUGLN(message) {\
+    if(is_debug_enabled()) Serial.println(message);\
+}
 
 #else
 
