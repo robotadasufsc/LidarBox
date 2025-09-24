@@ -30,15 +30,27 @@ void get_imu_readings(IMUData &results) {
 	long sum_gyro_x = 0, sum_gyro_y = 0, sum_gyro_z = 0;
 
 	digitalWrite(LED_BUILTIN_RX, LOW);
+	// alteração na horientação dos sensores, minusculo para aceleração, maiusculo para giroscópio
+	// x = az ; y = -ax ; z = -ay
+	// X = gZ ; Y = -gX; Z = -gY
 	for(size_t i = 0; i < imu_samples; i++) {
 		imu.read();
+		/*
 		sum_accel_x += imu.a.x;
 		sum_accel_y += imu.a.y;
 		sum_accel_z += imu.a.z;
 		sum_gyro_x += imu.g.x;
 		sum_gyro_y += imu.g.y;
 		sum_gyro_z += imu.g.z;
-	}
+		*/
+		sum_accel_x += imu.a.z;
+		sum_accel_y += -imu.a.x;
+		sum_accel_z += -imu.a.y;
+
+		sum_gyro_x += imu.g.z;
+		sum_gyro_y += -imu.g.x;
+		sum_gyro_z += -imu.g.y;
+		}
 	digitalWrite(LED_BUILTIN_RX, HIGH);
 
 	// Reading is at 0.000061 * g (acceleration of gravity). See https://www.pololu.com/file/0J1087/LSM6DS33.pdf, page 15
