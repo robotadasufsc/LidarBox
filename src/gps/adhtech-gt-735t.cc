@@ -105,7 +105,7 @@ void consume_gps() {
 		} else if(c == '\n') {
 			DEBUGLN();
 		} else {
-			DEBUG_STREAM.write(c);
+			if(DEBUG_STREAM) DEBUG_STREAM.write(c);
 		}
 		gps.encode(c);
 #else
