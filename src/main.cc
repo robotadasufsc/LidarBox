@@ -73,7 +73,7 @@ void fat_datetime_callback(uint16_t *date, uint16_t *time) {
 
 void setup() {
 #ifdef DEBUG_TO_SERIAL
-	Serial.begin(9600);
+	Serial.begin(115200);
 
 	// Careful with this next line, if computer isn't attatched it will hang
 	while(!Serial)  // loop while ProMicro takes a moment to get itself together
@@ -135,9 +135,7 @@ void setup() {
 		DEBUGLN(F("already exists."));
 	}
 
-	consume_gps();
-
-	delay(500);  // give it a chance to catch up before testing if it's ok.
+	wakeful_delay(500);  // give it a chance to catch up before testing if it's ok.
 	if(!logfile) {
 		DEBUGLN(F("ERROR: couldn't create log file. Halting."));
 		lock_and_report_error(ERR_SD_CREATE_FAIL);
@@ -275,7 +273,7 @@ void loop(void) {
 				get_imu_readings(imu_results);
 				logfile.flush();
 
-#ifdef DEBUG_TO_SERIAL
+#ifdef DEBUG_DATA
 				// Printout to USB-serial
 				if(DEBUG_STREAM)
 					write_data_line(DEBUG_STREAM, lidar_distance, imu_results);
@@ -294,7 +292,7 @@ void loop(void) {
 
 	int16_t lidar_distance = get_lidar_distance_cm();
 
-#ifdef DEBUG_TO_SERIAL
+#ifdef DEBUG_DATA
 	// Printout to USB-serial
 	if(DEBUG_STREAM)
 		write_data_line(DEBUG_STREAM, lidar_distance, imu_results);

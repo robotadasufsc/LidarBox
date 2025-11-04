@@ -1,6 +1,18 @@
 #pragma once
 
 #ifdef DEBUG_TO_SERIAL
+#error DEBUG_TO_SERIAL should not be passed to the compiler
+#endif
+
+#ifdef DEBUG_DATA
+#define DEBUG_TO_SERIAL
+#endif
+
+#ifdef DEBUG_NMEA
+#define DEBUG_TO_SERIAL
+#endif
+
+#ifdef DEBUG_TO_SERIAL
 
 #define DEBUG_STREAM Serial
 

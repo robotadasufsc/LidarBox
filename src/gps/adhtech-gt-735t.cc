@@ -96,21 +96,18 @@ void wakeful_delay(unsigned long ms) {
 }
 
 void consume_gps() {
+	char buffer[16];
 	while(Serial1.available() > 0) {
+		size_t size = 0;
+		while(size < 16 && Serial1.available() > 0)
+			buffer[size++] = Serial1.read();
+
 #ifdef DEBUG_NMEA
 		// Echo GPS to USB-serial port for debugging
-		char c = Serial1.read();
-		if(c == '\r') {
-			continue;
-		} else if(c == '\n') {
-			DEBUGLN();
-		} else {
-			if(DEBUG_STREAM) DEBUG_STREAM.write(c);
-		}
-		gps.encode(c);
-#else
-		gps.encode(Serial1.read());
+		DEBUG_STREAM.write(buffer, size);
 #endif
+		for(size_t i = 0; i < size; i++)
+			gps.encode(buffer[i]);
 	}
 }
 
