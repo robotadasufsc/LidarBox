@@ -72,9 +72,10 @@ void fat_datetime_callback(uint16_t *date, uint16_t *time) {
 }
 
 void setup() {
-#ifdef DEBUG_TO_SERIAL
+	// We start the serial object even without debug, or the IMU doesn't work
 	Serial.begin(115200);
 
+#ifdef DEBUG_TO_SERIAL
 	// Careful with this next line, if computer isn't attatched it will hang
 	while(!Serial)  // loop while ProMicro takes a moment to get itself together
 		if(millis() > 6000)  // give up waiting for USB cable plugin after 6 sec
@@ -263,7 +264,7 @@ void loop(void) {
 		unsigned long first_detected = millis();
 		unsigned long next_signal = 5000;
 
-		while(!gps.date.isUpdated()) {
+		while(!gps.date.isUpdated() || gps.location.age() > 1750) {
 			consume_gps();
 			unsigned long delta_t = millis() - first_detected;
 
@@ -271,7 +272,6 @@ void loop(void) {
 				int16_t lidar_distance = get_lidar_distance_cm();
 
 				get_imu_readings(imu_results);
-				logfile.flush();
 
 #ifdef DEBUG_DATA
 				// Printout to USB-serial
@@ -279,6 +279,7 @@ void loop(void) {
 					write_data_line(DEBUG_STREAM, lidar_distance, imu_results);
 #endif
 				write_data_line(logfile, lidar_distance, imu_results, true);
+				logfile.flush();
 
 				next_signal += 5000;
 			}
